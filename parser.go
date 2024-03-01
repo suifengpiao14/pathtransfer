@@ -52,13 +52,16 @@ func Parse(s string) (ts Transfers) {
 	return ts
 }
 
-type TransferJson string
-
-//Vocabulary 转换为Vocabulary对象
-func (tJson TransferJson) Vocabularies() (vocabularies Transfers, err error) {
-	if tJson == "" {
-		return nil, nil
+//Unmarshal 转换为Transfers对象
+func Unmarshal(tJson string) (vocabularies Transfers, err error) {
+	vocabularies = make(Transfers, 0)
+	err = json.Unmarshal([]byte(tJson), &vocabularies)
+	if err != nil {
+		return nil, err
 	}
+	return vocabularies, nil
+}
+func Marshal(tJson string) (vocabularies Transfers, err error) {
 	vocabularies = make(Transfers, 0)
 	err = json.Unmarshal([]byte(tJson), &vocabularies)
 	if err != nil {

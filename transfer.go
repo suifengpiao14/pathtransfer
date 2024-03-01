@@ -2,6 +2,7 @@ package pathtransfer
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -79,6 +80,16 @@ func (t Transfers) addTransferModify() (newT Transfers) {
 	}
 
 	return newT
+
+}
+
+func (t Transfers) Marshal() (tjson string, err error) {
+	b, err := json.Marshal(t)
+	if err != nil {
+		return "", err
+	}
+	tjson = string(b)
+	return tjson, nil
 
 }
 
