@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+type PathTransferLine string
+
+func (l PathTransferLine) Transfer() (ts Transfers) {
+	return Parse(string(l))
+}
+
 /**
 line stransfer example:
 api.getUser.input.id@int:db.user.Fuser_id@int
