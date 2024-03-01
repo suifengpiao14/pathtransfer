@@ -39,7 +39,7 @@ const (
 	Transfer_Direction_output = ".output." //函数出参
 )
 
-//SplitInOut 分割出入/出参数转换关系
+// SplitInOut 分割出入/出参数转换关系
 func (transfer Transfers) SplitInOut(namespace string) (in Transfers, out Transfers) {
 	namespace = fmt.Sprintf("%s.", strings.TrimRight(namespace, "."))
 	inpath, outpath := namespace, ""
@@ -137,7 +137,7 @@ func (ts Transfers) GetByNamespace(namespace string) (subTransfer Transfers) {
 	return subTransfer
 }
 
-func (t Transfers) String() (gjsonPath string) {
+func (t Transfers) GjsonPath() (gjsonPath string) {
 	newT := t.addTransferModify()
 	m := &transfersModel{
 		keys: make([]string, 0),
@@ -333,6 +333,23 @@ func (t Transfers) ModifySrcPath(srcPathModifyFns ...PathModifyFn) (nt Transfers
 		nt.AddReplace(item)
 	}
 	return nt
+}
+
+func (ts Transfers) String() (s string) {
+	var w bytes.Buffer
+	for _, t := range ts {
+		w.WriteString(t.Src.Path)
+		if t.Src.Type != "" {
+			w.WriteString(fmt.Sprintf("@%s", t.Src.Type))
+		}
+		w.WriteString(":")
+		w.WriteString(t.Dst.Path)
+		if t.Dst.Type != "" {
+			w.WriteString(fmt.Sprintf("@%s", t.Dst.Type))
+		}
+		w.WriteString("\n")
+	}
+	return w.String()
 }
 
 type TransferType struct {
