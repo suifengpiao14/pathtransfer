@@ -5,9 +5,9 @@ import (
 	"strings"
 )
 
-type PathTransferLine string
+type TransferLine string
 
-func (l PathTransferLine) Transfer() (ts Transfers) {
+func (l TransferLine) Transfer() (ts Transfers) {
 	return Parse(string(l))
 }
 
