@@ -1,6 +1,9 @@
 package pathtransfer
 
-import "strings"
+import (
+	"encoding/json"
+	"strings"
+)
 
 /**
 line stransfer example:
@@ -47,4 +50,19 @@ func Parse(s string) (ts Transfers) {
 		ts = append(ts, t)
 	}
 	return ts
+}
+
+type TransferJson string
+
+//Vocabulary 转换为Vocabulary对象
+func (tJson TransferJson) Vocabularies() (vocabularies Transfers, err error) {
+	if tJson == "" {
+		return nil, nil
+	}
+	vocabularies = make(Transfers, 0)
+	err = json.Unmarshal([]byte(tJson), &vocabularies)
+	if err != nil {
+		return nil, err
+	}
+	return vocabularies, nil
 }

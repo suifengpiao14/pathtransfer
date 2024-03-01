@@ -440,8 +440,8 @@ func str2StructTransfer(rt reflect.Type, prefix string) (transfers Transfers) {
 	return transfers
 }
 
-// TransferJson 修改json数据的key, 比如下划线修改为小驼峰
-func TransferJson(s string, modifyTransferFn func(transfer Transfers) (newTransfer Transfers)) (newS string, err error) {
+// RebuildJson 重建json数据 修改json数据的key, 比如下划线修改为小驼峰
+func RebuildJson(s string, modifyTransferFn func(transfer Transfers) (newTransfer Transfers)) (newS string, err error) {
 	paths := gjsonmodifier.GetAllPath(s)
 	transfers := make(Transfers, 0)
 	for _, path := range paths {
