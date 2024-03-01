@@ -39,6 +39,22 @@ const (
 	Transfer_Direction_output = ".output." //函数出参
 )
 
+//SplitInOut 分割出入/出参数转换关系
+func (transfer Transfers) SplitInOut(namespace string) (in Transfers, out Transfers) {
+	namespace = fmt.Sprintf("%s.", strings.TrimRight(namespace, "."))
+	inpath, outpath := namespace, ""
+	if !strings.Contains(namespace, Transfer_Direction_input) {
+		if strings.Contains(namespace, Transfer_Direction_output) {
+			inpath = strings.ReplaceAll(namespace, Transfer_Direction_output, Transfer_Direction_input)
+		} else {
+			inpath = fmt.Sprintf("%s%s", namespace, Transfer_Direction_input)
+		}
+	}
+	outpath = strings.ReplaceAll(inpath, Transfer_Direction_input, Transfer_Direction_output)
+	in, out = transfer.GetByNamespace(inpath), transfer.GetByNamespace(outpath)
+	return in, out
+}
+
 // 新增，存在替换
 func (transfer *Transfers) AddReplace(transferItems ...Transfer) {
 	for _, transferItem := range transferItems {
