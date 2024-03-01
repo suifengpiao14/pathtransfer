@@ -1,4 +1,4 @@
-module github.com/suifengpiao14/transfer
+module github.com/suifengpiao14/pathtransfer
 
 go 1.21.0
 

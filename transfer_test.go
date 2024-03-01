@@ -1,4 +1,4 @@
-package transfer_test
+package pathtransfer_test
 
 import (
 	"encoding/json"
