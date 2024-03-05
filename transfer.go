@@ -41,7 +41,7 @@ const (
 
 //SplitInOut 分割出入/出参数转换关系
 func (transfer Transfers) SplitInOut(namespace string) (in Transfers, out Transfers) {
-	namespace = fmt.Sprintf("%s.", strings.TrimRight(namespace, "."))
+	namespace = strings.Trim(namespace, ".")
 	inpath, outpath := namespace, ""
 	if !strings.Contains(namespace, Transfer_Direction_input) {
 		if strings.Contains(namespace, Transfer_Direction_output) {
@@ -60,7 +60,7 @@ func (transfer *Transfers) AddReplace(transferItems ...Transfer) {
 	for _, transferItem := range transferItems {
 		exists := false
 		for i, item := range *transfer {
-			if item.Dst.Path == transferItem.Dst.Path {
+			if strings.EqualFold(item.Src.Path, transferItem.Src.Path) && strings.EqualFold(item.Dst.Path, transferItem.Dst.Path) {
 				(*transfer)[i] = transferItem
 				exists = true
 				break
