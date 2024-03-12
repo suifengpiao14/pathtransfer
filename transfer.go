@@ -23,6 +23,20 @@ type Transfer struct {
 	Dst TransferUnit `json:"dst"`
 }
 
+func (t Transfer) String() (s string) {
+	var w bytes.Buffer
+	w.WriteString(t.Src.Path)
+	if t.Src.Type != "" {
+		w.WriteString(fmt.Sprintf("@%s", t.Src.Type))
+	}
+	w.WriteString(":")
+	w.WriteString(t.Dst.Path)
+	if t.Dst.Type != "" {
+		w.WriteString(fmt.Sprintf("@%s", t.Dst.Type))
+	}
+	return w.String()
+}
+
 // 外界不可以直接初始化,
 type Transfers []Transfer
 
@@ -338,15 +352,7 @@ func (t Transfers) ModifySrcPath(srcPathModifyFns ...PathModifyFn) (nt Transfers
 func (ts Transfers) String() (s string) {
 	var w bytes.Buffer
 	for _, t := range ts {
-		w.WriteString(t.Src.Path)
-		if t.Src.Type != "" {
-			w.WriteString(fmt.Sprintf("@%s", t.Src.Type))
-		}
-		w.WriteString(":")
-		w.WriteString(t.Dst.Path)
-		if t.Dst.Type != "" {
-			w.WriteString(fmt.Sprintf("@%s", t.Dst.Type))
-		}
+		w.WriteString(t.String())
 		w.WriteString("\n")
 	}
 	return w.String()
