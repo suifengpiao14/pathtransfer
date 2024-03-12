@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cast"
@@ -74,7 +75,7 @@ func (transfer *Transfers) AddReplace(transferItems ...Transfer) {
 	for _, transferItem := range transferItems {
 		exists := false
 		for i, item := range *transfer {
-			if strings.EqualFold(item.Src.Path, transferItem.Src.Path) && strings.EqualFold(item.Dst.Path, transferItem.Dst.Path) {
+			if strings.EqualFold(item.String(), transferItem.String()) {
 				(*transfer)[i] = transferItem
 				exists = true
 				break
@@ -113,6 +114,9 @@ func (t Transfers) addTransferModify() (newT Transfers) {
 
 }
 
+func (t Transfers) Sort() {
+	sort.Sort(t)
+}
 func (t Transfers) Marshal() (tjson string, err error) {
 	b, err := json.Marshal(t)
 	if err != nil {
