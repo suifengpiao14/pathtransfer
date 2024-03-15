@@ -8,9 +8,11 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cast"
 	"github.com/suifengpiao14/funcs"
 	"github.com/suifengpiao14/gjsonmodifier"
+	"github.com/suifengpiao14/pathtransfer/script"
 	"github.com/tidwall/gjson"
 )
 
@@ -19,6 +21,20 @@ type TransferUnit struct {
 	Type string `json:"type"`
 }
 
+func (tu TransferUnit) String() string {
+	var w bytes.Buffer
+	w.WriteString(tu.Path)
+	if tu.Type != "" {
+		w.WriteString(fmt.Sprintf("@%s", tu.Type))
+	}
+	return w.String()
+}
+
+const (
+	TransferUnit_Type_Int    = "int"
+	TransferUnit_Type_String = "string"
+)
+
 type Transfer struct {
 	Src TransferUnit `json:"src"`
 	Dst TransferUnit `json:"dst"`
@@ -26,16 +42,16 @@ type Transfer struct {
 
 func (t Transfer) String() (s string) {
 	var w bytes.Buffer
-	w.WriteString(t.Src.Path)
-	if t.Src.Type != "" {
-		w.WriteString(fmt.Sprintf("@%s", t.Src.Type))
-	}
+	w.WriteString(t.Src.String())
 	w.WriteString(":")
-	w.WriteString(t.Dst.Path)
-	if t.Dst.Type != "" {
-		w.WriteString(fmt.Sprintf("@%s", t.Dst.Type))
-	}
+	w.WriteString(t.Dst.String())
 	return w.String()
+}
+func (t Transfer) IsIn() bool {
+	return isIn(t.Src.Path)
+}
+func (t Transfer) IsOut() bool {
+	return isOut(t.Src.Path)
 }
 
 // 外界不可以直接初始化,
@@ -54,19 +70,29 @@ const (
 	Transfer_Direction_output = ".output." //函数出参
 )
 
+type InOUt interface {
+	IsIn() bool
+	IsOut() bool
+}
+
+func isIn(path string) bool {
+	return strings.Contains(path, Transfer_Direction_input)
+}
+
+func isOut(path string) bool {
+	return strings.Contains(path, Transfer_Direction_output)
+}
+
 // SplitInOut 分割出入/出参数转换关系
-func (transfer Transfers) SplitInOut(namespace string) (in Transfers, out Transfers) {
-	namespace = strings.Trim(namespace, ".")
-	inpath, outpath := namespace, ""
-	if !strings.Contains(namespace, Transfer_Direction_input) {
-		if strings.Contains(namespace, Transfer_Direction_output) {
-			inpath = strings.ReplaceAll(namespace, Transfer_Direction_output, Transfer_Direction_input)
-		} else {
-			inpath = fmt.Sprintf("%s%s", namespace, Transfer_Direction_input)
+func (transfers Transfers) SplitInOut() (in Transfers, out Transfers) {
+	in, out = make(Transfers, 0), make(Transfers, 0)
+	for _, t := range transfers {
+		if t.IsIn() {
+			in.AddReplace(t)
+		} else if t.IsOut() {
+			out.AddReplace(t)
 		}
 	}
-	outpath = strings.ReplaceAll(inpath, Transfer_Direction_input, Transfer_Direction_output)
-	in, out = transfer.GetByNamespace(inpath), transfer.GetByNamespace(outpath)
 	return in, out
 }
 
@@ -153,6 +179,19 @@ func (ts Transfers) GetByNamespace(namespace string) (subTransfer Transfers) {
 		}
 	}
 	return subTransfer
+}
+
+func TrimNamespace(path string, namespace string) (newPath string) {
+	newPath = strings.TrimPrefix(strings.TrimPrefix(path, namespace), ".")
+	return newPath
+}
+
+func JoinPath(paths ...string) (newPath string) {
+	for i := 0; i < len(paths); i++ {
+		paths[i] = strings.Trim(paths[i], ".")
+	}
+	newPath = strings.Join(paths, ".")
+	return newPath
 }
 
 func (t Transfers) GjsonPath() (gjsonPath string) {
@@ -351,6 +390,36 @@ func (t Transfers) ModifySrcPath(srcPathModifyFns ...PathModifyFn) (nt Transfers
 		nt.AddReplace(item)
 	}
 	return nt
+}
+
+//GetCallFnScript 从transfer中获取调用函数的动态脚本
+func (ts Transfers) GetCallFnScript(language string) (callScript string, err error) {
+	funcParameters := make(FuncParameters, 0)
+	for _, t := range ts {
+		funcParameter, err := ExplainFuncPath(t.Src.String())
+		if errors.Is(err, ERROR_TRANSFER_PATH_NAMESPACE_NOT_FUNC) || errors.Is(err, ERROR_TRANSFER_PATH_DIRECTION_MISSING) {
+			err = nil
+			continue
+		}
+		if err != nil {
+			return "", err
+		}
+		funcParameters.AddReplace(*funcParameter)
+
+	}
+
+	switch strings.ToLower(language) {
+	case script.SCRIPT_LANGUAGE_GO:
+		callFuncs := funcParameters.CallFuncs()
+		callScript, err = callFuncs.Script(language)
+		if err != nil {
+			return "", err
+		}
+		return callScript, nil
+	default:
+		err = errors.Errorf("unsuport language:%s", language)
+		return "", err
+	}
 }
 
 func (ts Transfers) String() (s string) {

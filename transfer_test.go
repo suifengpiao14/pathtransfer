@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/suifengpiao14/lineschema"
+	"github.com/suifengpiao14/pathtransfer"
 	"github.com/tidwall/gjson"
 )
 
@@ -36,7 +37,7 @@ func TestToGoTypeTransfer(t *testing.T) {
 	`
 		lschema, err := lineschema.ParseLineschema(lschemaRaw)
 		require.NoError(t, err)
-		pathMap := lschema.TransferToFormat().String()
+		pathMap := lschema.TransferToFormat().GjsonPath()
 		expected := `{code:code.@tonum,message:message.@tostring,items:{id:items.#.id.@tonum,title:items.#.title.@tostring,windowIds:items.#.windowIds.#.@tonum,windowIds1:items.#.windowIds1.#.@tonum,windowIds2:items.#.windowIds2.#.@tostring}|@groupPlus:0,pagination:{index:pagination.index.@tonum,size:pagination.size.@tonum,total:pagination.total.@tonum}}`
 		assert.Equal(t, expected, pathMap)
 
@@ -47,34 +48,35 @@ func TestToGoTypeTransfer(t *testing.T) {
 	})
 
 	t.Run("struct", func(t *testing.T) {
-		lineSchema := lineschema.ToGoTypeTransfer(new(user)).String()
+
+		lineSchema := pathtransfer.ToGoTypeTransfer(new(user)).GjsonPath()
 		expected := `{name:@this.name.@tostring,userId:@this.userId.@tonum}`
 		assert.Equal(t, expected, lineSchema)
 	})
 
 	t.Run("slice[struct]", func(t *testing.T) {
 		users := make([]user, 0)
-		lineSchema := lineschema.ToGoTypeTransfer(users).String()
+		lineSchema := pathtransfer.ToGoTypeTransfer(users).GjsonPath()
 		expected := `{name:@this.#.name.@tostring,userId:@this.#.userId.@tonum}|@groupPlus:0`
 		assert.Equal(t, expected, lineSchema)
 	})
 	t.Run("array[struct]", func(t *testing.T) {
 		users := [2]user{}
-		lineSchema := lineschema.ToGoTypeTransfer(users).String()
+		lineSchema := pathtransfer.ToGoTypeTransfer(users).GjsonPath()
 		expected := `{name:@this.#.name.@tostring,userId:@this.#.userId.@tonum}|@groupPlus:0`
 		assert.Equal(t, expected, lineSchema)
 	})
 
 	t.Run("array[int]", func(t *testing.T) {
 		ids := [2]string{}
-		lineSchema := lineschema.ToGoTypeTransfer(ids).String()
+		lineSchema := pathtransfer.ToGoTypeTransfer(ids).GjsonPath()
 		expected := `@this.#.@tostring`
 		assert.Equal(t, expected, lineSchema)
 	})
 
 	t.Run("int", func(t *testing.T) {
 		id := 2
-		lineSchema := lineschema.ToGoTypeTransfer(id).String()
+		lineSchema := pathtransfer.ToGoTypeTransfer(id).GjsonPath()
 		expected := `@this.@tonum`
 		assert.Equal(t, expected, lineSchema)
 	})
@@ -95,13 +97,13 @@ fullname=pagination.size,format=int,required,title=每页数量,default=10,comme
 fullname=pagination.total,format=int,required,title=总数,comment=总数,example=60`
 		lschema, err := lineschema.ParseLineschema(packschema)
 		require.NoError(t, err)
-		gjsonPath := lschema.TransferToFormat().Reverse().String()
+		gjsonPath := lschema.TransferToFormat().Reverse().GjsonPath()
 		expected := `{code:code.@tostring,message:message.@tostring,items:{id:items.#.id.@tostring,name:items.#.name.@tostring,title:items.#.title.@tostring,config:items.#.config.@tostring,createdAt:items.#.createdAt.@tostring,updatedAt:items.#.updatedAt.@tostring}|@groupPlus:0,pagination:{index:pagination.index.@tostring,size:pagination.size.@tostring,total:pagination.total.@tostring}}`
 		assert.Equal(t, expected, gjsonPath)
 
 		data := `{"code":0,"message":"","items":[{"id":2,"name":"advertise1","title":"广aa告","config":"{\"navs\":[1]}","createdAt":"","updatedAt":""}],"pagination":{"index":0,"size":10,"total":1}}`
 		_ = data
-		// out := gjson.Get(data, gjsonPath).String()
+		// out := gjson.Get(data, gjsonPath).GjsonPath()
 		// fmt.Println(out)
 	})
 
@@ -116,14 +118,14 @@ fullname=navs[].route,required,title=路由,comment=路由
 fullname=navs[].sort,format=int,required,title=排序,comment=排序`
 		lschema, err := lineschema.ParseLineschema(packschema)
 		require.NoError(t, err)
-		gjsonPath := lschema.TransferToFormat().Reverse().String()
+		gjsonPath := lschema.TransferToFormat().Reverse().GjsonPath()
 
 		expected := `{code:code.@tostring,message:message.@tostring,navs:{id:navs.#.id.@tostring,name:navs.#.name.@tostring,title:navs.#.title.@tostring,route:navs.#.route.@tostring,sort:navs.#.sort.@tostring}|@groupPlus:0}`
 		assert.Equal(t, expected, gjsonPath)
 
 		data := `{"code":0,"message":"","navs":[{"id":1,"name":"creative","title":"广告创意","route":"creativeList","sort":99},{"id":2,"name":"plan","title":"广告计划","route":"planList","sort":98},{"id":3,"name":"window","title":"橱窗","route":"windowList","sort":97}]}`
 		_ = data
-		// out := gjson.Get(data, gjsonPath).String()
+		// out := gjson.Get(data, gjsonPath).GjsonPath()
 		// fmt.Println(out)
 
 	})
@@ -134,13 +136,13 @@ fullname=message,required,title=业务提示,default=ok,comment=业务提示,exa
 fullname=uiSchema,type=object,required,title=uiSchema对象,comment=uiSchema对象`
 		lschema, err := lineschema.ParseLineschema(packschema)
 		require.NoError(t, err)
-		gjsonPath := lschema.TransferToFormat().Reverse().String()
+		gjsonPath := lschema.TransferToFormat().Reverse().GjsonPath()
 		expected := `{code:code.@tostring,message:message.@tostring,uiSchema:uiSchema}`
 		assert.Equal(t, expected, gjsonPath)
 
 		data := `{"code":0,"message":"","uiSchema":""}`
 		_ = data
-		// out := gjson.Get(data, gjsonPath).String()
+		// out := gjson.Get(data, gjsonPath).GjsonPath()
 		// fmt.Println(out)
 	})
 	t.Run("deep array", func(t *testing.T) {
@@ -151,7 +153,7 @@ fullname=services[].servers[].title,required,title=服务名称,comment=服务�
 `
 		lschema, err := lineschema.ParseLineschema(packschema)
 		require.NoError(t, err)
-		gjsonPath := lschema.TransferToFormat().Reverse().String()
+		gjsonPath := lschema.TransferToFormat().Reverse().GjsonPath()
 		expected := `{services:{name:services.#.name.@tostring,servers:{name:services.#.servers.#.name.@tostring,title:services.#.servers.#.title.@tostring}|@groupPlus:1}|@groupPlus:0}`
 		assert.Equal(t, expected, gjsonPath)
 
@@ -168,7 +170,7 @@ fullname=services[].serverIds[],required,format=int,title=服务标识,comment=�
 `
 		lschema, err := lineschema.ParseLineschema(packschema)
 		require.NoError(t, err)
-		gjsonPath := lschema.TransferToFormat().Reverse().String()
+		gjsonPath := lschema.TransferToFormat().Reverse().GjsonPath()
 		expected := `{services:{name:services.#.name.@tostring,serverIds:services.#.serverIds.#.@tostring}|@groupPlus:0}`
 		assert.Equal(t, expected, gjsonPath)
 
@@ -199,7 +201,7 @@ fullname=pagination.size,format=int,required,title=每页数量,default=10,comme
 fullname=pagination.total,format=int,required,title=总数,comment=总数,example=60`
 		lschema, err := lineschema.ParseLineschema(packschema)
 		require.NoError(t, err)
-		path := lschema.TransferToFormat().Reverse().String()
+		path := lschema.TransferToFormat().Reverse().GjsonPath()
 		expected := `{code:code.@tostring,message:message.@tostring,services:{id:services.#.id.@tostring,name:services.#.name.@tostring,title:services.#.title.@tostring,document:services.#.document.@tostring,createdAt:services.#.createdAt.@tostring,updatedAt:services.#.updatedAt.@tostring,servers:{name:services.#.servers.#.name.@tostring,title:services.#.servers.#.title.@tostring}|@groupPlus:1,navs:{name:services.#.navs.#.name.@tostring,title:services.#.navs.#.title.@tostring,route:services.#.navs.#.route.@tostring,sort:services.#.navs.#.sort.@tostring}|@groupPlus:1}|@groupPlus:0,pagination:{index:pagination.index.@tostring,size:pagination.size.@tostring,total:pagination.total.@tostring}}`
 		assert.Equal(t, expected, path)
 
@@ -254,7 +256,7 @@ fullname=message,required,title=业务提示,default=ok,comment=业务提示,exa
 		_ = data
 		lschema, err := lineschema.ParseLineschema(unpackSchema)
 		require.NoError(t, err)
-		path := lschema.TransferToFormat().Reverse().String()
+		path := lschema.TransferToFormat().Reverse().GjsonPath()
 		exceptedPath := `{service:{name:service.name.@tostring,title:service.title.@tostring,document:service.document.@tostring},servers:{name:servers.#.name.@tostring,title:servers.#.title.@tostring,url:servers.#.url.@tostring,proxy:servers.#.proxy.@tostring,env:servers.#.env.@tostring}|@groupPlus:0,navigates:{name:navigates.#.name.@tostring,title:navigates.#.title.@tostring,route:navigates.#.route.@tostring,sort:navigates.#.sort.@tostring}|@groupPlus:0,dataSchemas:{name:dataSchemas.#.name.@tostring,serviceName:dataSchemas.#.serviceName.@tostring,navRote:dataSchemas.#.navRote.@tostring,parentNavRoute:dataSchemas.#.parentNavRoute.@tostring,scene:dataSchemas.#.scene.@tostring,description:dataSchemas.#.description.@tostring,request:{type:dataSchemas.#.request.#.type.@tostring,title:dataSchemas.#.request.#.title.@tostring,fullname:dataSchemas.#.request.#.fullname.@tostring,name:dataSchemas.#.request.#.name.@tostring,primaryKey:dataSchemas.#.request.#.primaryKey.@tostring,required:dataSchemas.#.request.#.required.@tostring,scene:dataSchemas.#.request.#.scene.@tostring}|@groupPlus:1,response:{type:dataSchemas.#.response.#.type.@tostring,title:dataSchemas.#.response.#.title.@tostring,fullname:dataSchemas.#.response.#.fullname.@tostring,name:dataSchemas.#.response.#.name.@tostring,primaryKey:dataSchemas.#.response.#.primaryKey.@tostring,required:dataSchemas.#.response.#.required.@tostring,scene:dataSchemas.#.response.#.scene.@tostring}|@groupPlus:1,action:{url:dataSchemas.#.action.url.@tostring,method:dataSchemas.#.action.method.@tostring}|@groupPlus:0}|@groupPlus:0,code:code.@tostring,message:message.@tostring}`
 		assert.Equal(t, exceptedPath, path)
 		/* newData := gjson.Get(data, path).String()
@@ -348,7 +350,7 @@ func TestTransfer2(t *testing.T) {
 func TestTransferJson(t *testing.T) {
 	jsonStr := `[{"DatabaseConfig":{"databaseName":"ad","tablePrefix":"","columnPrefix":"","deletedAtColumn":"deleted_at","logLevel":"","version":"","extaConfigs":null},"TableName":"creative","PrimaryKey":"id","DeleteColumn":"deleted_at","Columns":[{"Prefix":"","CamelName":"Id","ColumnName":"id","Name":"id","Type":"int","Comment":"主键","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":true,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"PlanId","ColumnName":"plan_id","Name":"plan_id","Type":"string","Comment":"广告计划Id","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Name","ColumnName":"name","Name":"name","Type":"string","Comment":"名称","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Content","ColumnName":"content","Name":"content","Type":"string","Comment":"广告内容","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"CreatedAt","ColumnName":"created_at","Name":"created_at","Type":"string","Comment":"创建时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"current_timestamp()","OnCreate":true,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"UpdatedAt","ColumnName":"updated_at","Name":"updated_at","Type":"string","Comment":"修改时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"current_timestamp()","OnCreate":false,"OnUpdate":true,"OnDelete":false},{"Prefix":"","CamelName":"DeletedAt","ColumnName":"deleted_at","Name":"deleted_at","Type":"string","Comment":"删除时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"NULL","OnCreate":false,"OnUpdate":false,"OnDelete":true}],"EnumsConst":[],"Comment":"广告物料","TableDef":null},{"DatabaseConfig":{"databaseName":"ad","tablePrefix":"","columnPrefix":"","deletedAtColumn":"deleted_at","logLevel":"","version":"","extaConfigs":null},"TableName":"plan","PrimaryKey":"id","DeleteColumn":"deleted_at","Columns":[{"Prefix":"","CamelName":"Id","ColumnName":"id","Name":"id","Type":"int","Comment":"主键","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":true,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"AdvertiserId","ColumnName":"advertiser_id","Name":"advertiser_id","Type":"string","Comment":"广告主","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Name","ColumnName":"name","Name":"name","Type":"string","Comment":"名称","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Position","ColumnName":"position","Name":"position","Type":"string","Comment":"位置编码","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"BeginAt","ColumnName":"begin_at","Name":"begin_at","Type":"string","Comment":"投放开始时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"NULL","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"EndAt","ColumnName":"end_at","Name":"end_at","Type":"string","Comment":"投放结束时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"NULL","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Did","ColumnName":"did","Name":"did","Type":"int","Comment":"出价","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"0","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"LandingPage","ColumnName":"landing_page","Name":"landing_page","Type":"string","Comment":"落地页","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"CreatedAt","ColumnName":"created_at","Name":"created_at","Type":"string","Comment":"创建时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"current_timestamp()","OnCreate":true,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"UpdatedAt","ColumnName":"updated_at","Name":"updated_at","Type":"string","Comment":"修改时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"current_timestamp()","OnCreate":false,"OnUpdate":true,"OnDelete":false},{"Prefix":"","CamelName":"DeletedAt","ColumnName":"deleted_at","Name":"deleted_at","Type":"string","Comment":"删除时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"NULL","OnCreate":false,"OnUpdate":false,"OnDelete":true}],"EnumsConst":[],"Comment":"广告计划","TableDef":null},{"DatabaseConfig":{"databaseName":"ad","tablePrefix":"","columnPrefix":"","deletedAtColumn":"deleted_at","logLevel":"","version":"","extaConfigs":null},"TableName":"window","PrimaryKey":"id","DeleteColumn":"deleted_at","Columns":[{"Prefix":"","CamelName":"Id","ColumnName":"id","Name":"id","Type":"int","Comment":"主键","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":true,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"MediaId","ColumnName":"media_id","Name":"media_id","Type":"string","Comment":"媒体Id","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Position","ColumnName":"position","Name":"position","Type":"string","Comment":"位置编码","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Name","ColumnName":"name","Name":"name","Type":"string","Comment":"位置名称","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Remark","ColumnName":"remark","Name":"remark","Type":"string","Comment":"广告位描述(建议记录位置、app名称等)","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Scheme","ColumnName":"scheme","Name":"scheme","Type":"string","Comment":"广告素材的格式规范","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"CreatedAt","ColumnName":"created_at","Name":"created_at","Type":"string","Comment":"创建时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"current_timestamp()","OnCreate":true,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"UpdatedAt","ColumnName":"updated_at","Name":"updated_at","Type":"string","Comment":"修改时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"current_timestamp()","OnCreate":false,"OnUpdate":true,"OnDelete":false},{"Prefix":"","CamelName":"DeletedAt","ColumnName":"deleted_at","Name":"deleted_at","Type":"string","Comment":"删除时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"NULL","OnCreate":false,"OnUpdate":false,"OnDelete":true}],"EnumsConst":[],"Comment":"广告位表","TableDef":null}]`
 	//jsonStr := `[{"Enums":[]}]`
-	newJson, err := lineschema.TransferJson(jsonStr, func(transfer lineschema.Transfers) (newTransfer lineschema.Transfers) {
+	newJson, err := pathtransfer.RebuildJson(jsonStr, func(transfer pathtransfer.Transfers) (newTransfer pathtransfer.Transfers) {
 		return transfer
 	})
 	require.NoError(t, err)
@@ -357,8 +359,8 @@ func TestTransferJson(t *testing.T) {
 
 func TestTransferJsonChange(t *testing.T) {
 	jsonStr := `[{"DatabaseConfig":{"databaseName":"ad","tablePrefix":"","columnPrefix":"","deletedAtColumn":"deleted_at","logLevel":"","version":"","extaConfigs":null},"TableName":"creative","PrimaryKey":"id","DeleteColumn":"deleted_at","Columns":[{"Prefix":"","CamelName":"Id","ColumnName":"id","Name":"id","Type":"int","Comment":"主键","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":true,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"PlanId","ColumnName":"plan_id","Name":"plan_id","Type":"string","Comment":"广告计划Id","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Name","ColumnName":"name","Name":"name","Type":"string","Comment":"名称","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Content","ColumnName":"content","Name":"content","Type":"string","Comment":"广告内容","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"CreatedAt","ColumnName":"created_at","Name":"created_at","Type":"string","Comment":"创建时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"current_timestamp()","OnCreate":true,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"UpdatedAt","ColumnName":"updated_at","Name":"updated_at","Type":"string","Comment":"修改时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"current_timestamp()","OnCreate":false,"OnUpdate":true,"OnDelete":false},{"Prefix":"","CamelName":"DeletedAt","ColumnName":"deleted_at","Name":"deleted_at","Type":"string","Comment":"删除时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"NULL","OnCreate":false,"OnUpdate":false,"OnDelete":true}],"EnumsConst":[],"Comment":"广告物料","TableDef":null},{"DatabaseConfig":{"databaseName":"ad","tablePrefix":"","columnPrefix":"","deletedAtColumn":"deleted_at","logLevel":"","version":"","extaConfigs":null},"TableName":"plan","PrimaryKey":"id","DeleteColumn":"deleted_at","Columns":[{"Prefix":"","CamelName":"Id","ColumnName":"id","Name":"id","Type":"int","Comment":"主键","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":true,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"AdvertiserId","ColumnName":"advertiser_id","Name":"advertiser_id","Type":"string","Comment":"广告主","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Name","ColumnName":"name","Name":"name","Type":"string","Comment":"名称","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Position","ColumnName":"position","Name":"position","Type":"string","Comment":"位置编码","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"BeginAt","ColumnName":"begin_at","Name":"begin_at","Type":"string","Comment":"投放开始时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"NULL","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"EndAt","ColumnName":"end_at","Name":"end_at","Type":"string","Comment":"投放结束时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"NULL","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Did","ColumnName":"did","Name":"did","Type":"int","Comment":"出价","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"0","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"LandingPage","ColumnName":"landing_page","Name":"landing_page","Type":"string","Comment":"落地页","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"CreatedAt","ColumnName":"created_at","Name":"created_at","Type":"string","Comment":"创建时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"current_timestamp()","OnCreate":true,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"UpdatedAt","ColumnName":"updated_at","Name":"updated_at","Type":"string","Comment":"修改时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"current_timestamp()","OnCreate":false,"OnUpdate":true,"OnDelete":false},{"Prefix":"","CamelName":"DeletedAt","ColumnName":"deleted_at","Name":"deleted_at","Type":"string","Comment":"删除时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"NULL","OnCreate":false,"OnUpdate":false,"OnDelete":true}],"EnumsConst":[],"Comment":"广告计划","TableDef":null},{"DatabaseConfig":{"databaseName":"ad","tablePrefix":"","columnPrefix":"","deletedAtColumn":"deleted_at","logLevel":"","version":"","extaConfigs":null},"TableName":"window","PrimaryKey":"id","DeleteColumn":"deleted_at","Columns":[{"Prefix":"","CamelName":"Id","ColumnName":"id","Name":"id","Type":"int","Comment":"主键","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":true,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"MediaId","ColumnName":"media_id","Name":"media_id","Type":"string","Comment":"媒体Id","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Position","ColumnName":"position","Name":"position","Type":"string","Comment":"位置编码","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Name","ColumnName":"name","Name":"name","Type":"string","Comment":"位置名称","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Remark","ColumnName":"remark","Name":"remark","Type":"string","Comment":"广告位描述(建议记录位置、app名称等)","Tag":"","Nullable":false,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"Scheme","ColumnName":"scheme","Name":"scheme","Type":"string","Comment":"广告素材的格式规范","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"","OnCreate":false,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"CreatedAt","ColumnName":"created_at","Name":"created_at","Type":"string","Comment":"创建时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"current_timestamp()","OnCreate":true,"OnUpdate":false,"OnDelete":false},{"Prefix":"","CamelName":"UpdatedAt","ColumnName":"updated_at","Name":"updated_at","Type":"string","Comment":"修改时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"current_timestamp()","OnCreate":false,"OnUpdate":true,"OnDelete":false},{"Prefix":"","CamelName":"DeletedAt","ColumnName":"deleted_at","Name":"deleted_at","Type":"string","Comment":"删除时间","Tag":"","Nullable":true,"Enums":[],"AutoIncrement":false,"DefaultValue":"NULL","OnCreate":false,"OnUpdate":false,"OnDelete":true}],"EnumsConst":[],"Comment":"广告位表","TableDef":null}]`
-	newJson, err := lineschema.TransferJson(jsonStr, func(transfer lineschema.Transfers) (newTransfer lineschema.Transfers) {
-		transfer = transfer.ModifyDstPath(lineschema.PathModifyFnSmallCameCase)
+	newJson, err := pathtransfer.RebuildJson(jsonStr, func(transfer pathtransfer.Transfers) (newTransfer pathtransfer.Transfers) {
+		transfer = transfer.ModifyDstPath(pathtransfer.PathModifyFnSmallCameCase)
 		//transfer = transfer.ModifySrcPath(lineschema.PathModifyFnString)
 		return transfer
 	})
