@@ -15,6 +15,7 @@ type ScriptI interface {
 	Language() string
 	Compile() (err error)
 	Run(script string) (out string, err error)
+	CallFuncScript(funcName string, input string) (callFuncScript string) //最终调用函数代码
 }
 
 func NewScriptEngine(language string) (scriptI ScriptI, err error) {

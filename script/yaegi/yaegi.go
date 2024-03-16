@@ -1,6 +1,9 @@
 package yaegi
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/pkg/errors"
 	_ "github.com/spf13/cast"
 	_ "github.com/syyongx/php2go"
@@ -38,9 +41,17 @@ func (sgo *ScriptGo) Compile() (err error) {
 			return err
 		}
 	}
-
 	sgo.engine = engine
 	return nil
+}
+
+//CallFuncScript 实际调用时的脚本语句
+func (sgo *ScriptGo) CallFuncScript(funcName string, input string) (callScript string) {
+	arr := strings.Split(funcName, ".")
+	arr[len(arr)-1] = fmt.Sprintf("Call%s", arr[len(arr)-1]) // callfunc.tpl go 模板 生成调用函数时有前缀Call
+	realFuncName := strings.Join(arr, ".")
+	callScript = fmt.Sprintf("%s(`%s`)", realFuncName, input)
+	return callScript
 }
 
 func (sgo *ScriptGo) Run(script string) (out string, err error) {

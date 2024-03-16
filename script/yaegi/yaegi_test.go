@@ -8,8 +8,6 @@ import (
 	"github.com/suifengpiao14/pathtransfer/script/yaegi"
 )
 
-
-
 func TestScriptGo(t *testing.T) {
 	code := `
 		package vocabulary
@@ -54,7 +52,7 @@ func CallSetLimit(input string) (out string, err error) {
 	engine := yaegi.NewScriptGo()
 	engine.WriteCode(code, callCode)
 	input := `{"func":{"vocabulary":{"SetLimit":{"input":{"index":1,"size":20}}}}}`
-	runCode := fmt.Sprintf("vocabulary.CallSetLimit(`%s`)", input)
+	runCode := engine.CallFuncScript("vocabulary.SetLimit", input)
 	out, err := engine.Run(runCode)
 	require.NoError(t, err)
 	fmt.Println(out)

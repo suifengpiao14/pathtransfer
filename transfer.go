@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cast"
 	"github.com/suifengpiao14/funcs"
 	"github.com/suifengpiao14/gjsonmodifier"
-	"github.com/suifengpiao14/pathtransfer/script"
 	"github.com/tidwall/gjson"
 )
 
@@ -408,18 +407,12 @@ func (ts Transfers) GetCallFnScript(language string) (callScript string, err err
 
 	}
 
-	switch strings.ToLower(language) {
-	case script.SCRIPT_LANGUAGE_GO:
-		callFuncs := funcParameters.CallFuncs()
-		callScript, err = callFuncs.Script(language)
-		if err != nil {
-			return "", err
-		}
-		return callScript, nil
-	default:
-		err = errors.Errorf("unsuport language:%s", language)
+	callFuncs := funcParameters.CallFuncs()
+	callScript, err = callFuncs.Script(language)
+	if err != nil {
 		return "", err
 	}
+	return callScript, nil
 }
 
 func (ts Transfers) String() (s string) {

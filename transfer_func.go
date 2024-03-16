@@ -33,7 +33,12 @@ func (cfs CallFuncs) Script(language string) (script string, err error) {
 		return "", err
 	}
 	var w bytes.Buffer
-	err = t.ExecuteTemplate(&w, language, cfs)
+	tmpl := t.Lookup(language)
+	if tmpl == nil {
+		err = errors.Errorf("unsport script language:%s", language)
+		return "", err
+	}
+	err = tmpl.Execute(&w, cfs)
 	if err != nil {
 		return "", err
 	}
