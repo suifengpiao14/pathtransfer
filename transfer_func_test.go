@@ -37,3 +37,53 @@ func TestExplainFuncPath(t *testing.T) {
 	})
 
 }
+
+func TestGetTransferFuncname(t *testing.T) {
+
+	transfers := make(pathtransfer.Transfers, 0)
+
+	transfers = append(transfers, pathtransfer.Transfer{
+		Src: pathtransfer.TransferUnit{Path: "func.vocabulary.TrimName.input.name", Type: "string"},
+		Dst: pathtransfer.TransferUnit{Path: "data.userName"},
+	})
+
+	transfers = append(transfers, pathtransfer.Transfer{
+		Src: pathtransfer.TransferUnit{Path: "func.vocabulary.TrimName.output.name", Type: "string"},
+		Dst: pathtransfer.TransferUnit{Path: "data.userName"},
+	})
+
+	transfers = append(transfers, pathtransfer.Transfer{
+		Src: pathtransfer.TransferUnit{Path: "user.name", Type: "string"},
+		Dst: pathtransfer.TransferUnit{Path: "data.userName"},
+	})
+
+	transfers = append(transfers, pathtransfer.Transfer{
+		Src: pathtransfer.TransferUnit{Path: "func.vocabulary.SetLimit.input.index", Type: "int"},
+		Dst: pathtransfer.TransferUnit{Path: "data.pagination.index"},
+	})
+
+	transfers = append(transfers, pathtransfer.Transfer{
+		Src: pathtransfer.TransferUnit{Path: "func.vocabulary.SetLimit.input.size", Type: "int"},
+		Dst: pathtransfer.TransferUnit{Path: "data.pagination.size"},
+	})
+
+	transfers = append(transfers, pathtransfer.Transfer{
+		Src: pathtransfer.TransferUnit{Path: "func.vocabulary.SetLimit.output.offset", Type: "int"},
+		Dst: pathtransfer.TransferUnit{Path: "data.limit.offset"},
+	})
+
+	transfers = append(transfers, pathtransfer.Transfer{
+		Src: pathtransfer.TransferUnit{Path: "func.vocabulary.SetLimit.output.size", Type: "int"},
+		Dst: pathtransfer.TransferUnit{Path: "data.limit.size"},
+	})
+
+	var data = `{"data":{"pagination":{"index":1,"size":20}},"user":{"name":"testName"}}`
+
+	dstKey := []string{
+		"data.limit.offset",
+		"data.limit.size",
+	}
+	funcName := pathtransfer.GetTransferFuncname(transfers, data, dstKey)
+	require.Equal(t, "func.vocabulary.SetLimit", funcName)
+
+}
