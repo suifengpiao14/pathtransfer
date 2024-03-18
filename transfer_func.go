@@ -9,6 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 	_ "github.com/suifengpiao14/gjsonmodifier"
+	"github.com/tidwall/gjson"
 )
 
 const (
@@ -72,7 +73,7 @@ func (fp FuncParameter) String() (s string) {
 	return s
 }
 
-//TypeConvertFunc 类型转换函数
+// TypeConvertFunc 类型转换函数
 func (fp FuncParameter) TypeConvertFunc() (fnName string) {
 	m := map[string]string{
 		"int": "ToInt", //使用 cast.XXX 方法
@@ -178,7 +179,7 @@ var (
 	ERROR_TRANSFER_PATH_DIRECTION_MISSING  = errors.New("missing direction")
 )
 
-//ExplainFuncPath 解析函数格式路径
+// ExplainFuncPath 解析函数格式路径
 func ExplainFuncPath(funcPath string) (funcParameter *FuncParameter, err error) {
 	funcParameter = &FuncParameter{}
 	if !strings.HasPrefix(funcPath, Transfer_Top_Namespace_Func) {
@@ -224,4 +225,27 @@ func ExplainFuncPath(funcPath string) (funcParameter *FuncParameter, err error) 
 	}
 	funcParameter.Path = fmt.Sprintf("%s%s%s%s", Transfer_Top_Namespace_Func, funcName, funcParameter.Direction, funcParameter.Name) // 剔除name后面的部分，对于对象和原始的funcpath有区别
 	return funcParameter, nil
+}
+
+// GetTransferFuncname 根据输入数据,以及目标key路径,从transfers中选者合适的函数,返回函数名
+func GetTransferFuncname(transfers Transfers, data string, dstKeys []string) (funcName string) {
+	transfers = transfers.GetByNamespace(Transfer_Top_Namespace_Func)
+	dstTransfers := transfers.FilterByDst(dstKeys...)
+	funcNames := dstTransfers.GetSrcNamespace(Transfer_Direction_output)
+	for _, funcName := range funcNames {
+		inputNamespace := JoinPath(funcName, Transfer_Direction_input)
+		inputTransfers := transfers.GetByNamespace(inputNamespace)
+		allInputKeyExist := true
+		for _, t := range inputTransfers {
+			if !gjson.Get(data, t.Dst.Path).Exists() {
+				allInputKeyExist = false
+				break
+			}
+		}
+		if allInputKeyExist {
+			return funcName
+		}
+
+	}
+	return ""
 }

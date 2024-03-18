@@ -152,6 +152,55 @@ func (t Transfers) Marshal() (tjson string, err error) {
 
 }
 
+// FilterBySrc 通过srcpath 过滤
+func (ts Transfers) FilterBySrc(srcPaths ...string) (subTransfers Transfers) {
+	subTransfers = make(Transfers, 0)
+	for _, srcPath := range srcPaths {
+		for _, t := range ts {
+			if strings.EqualFold(t.Src.Path, srcPath) {
+				subTransfers.AddReplace(t)
+				break
+			}
+		}
+	}
+
+	return subTransfers
+}
+
+// FilterByDst 通过srcpath 过滤(已知目标词典path,找转换函数时会用到)
+func (ts Transfers) FilterByDst(dstPaths ...string) (subTransfers Transfers) {
+	subTransfers = make(Transfers, 0)
+	for _, dstPath := range dstPaths {
+		for _, t := range ts {
+			if strings.EqualFold(t.Dst.Path, dstPath) {
+				subTransfers.AddReplace(t)
+				break
+			}
+		}
+	}
+
+	return subTransfers
+}
+
+// GetSrcNamespace 获取所有命名空间 delim 一般为.input.|.output.
+func (ts Transfers) GetSrcNamespace(delim string) (namespaces []string) {
+	namespaces = make([]string, 0)
+	m := make(map[string]struct{})
+	for _, t := range ts {
+		if index := strings.Index(t.Src.Path, delim); index > -1 {
+			namespace := t.Src.Path[:index]
+			m[namespace] = struct{}{}
+		}
+	}
+
+	for namespace := range m {
+		namespaces = append(namespaces, namespace)
+	}
+
+	return namespaces
+
+}
+
 type transfersKeys []string
 
 func (tks *transfersKeys) AppendIgnore(key string) { // 存在忽略
@@ -391,7 +440,7 @@ func (t Transfers) ModifySrcPath(srcPathModifyFns ...PathModifyFn) (nt Transfers
 	return nt
 }
 
-//GetCallFnScript 从transfer中获取调用函数的动态脚本
+// GetCallFnScript 从transfer中获取调用函数的动态脚本
 func (ts Transfers) GetCallFnScript(language string) (callScript string, err error) {
 	funcParameters := make(FuncParameters, 0)
 	for _, t := range ts {
