@@ -1,5 +1,8 @@
 {{- define "go" -}}
+{{$package:=.FirstPackage}}
+{{if $package}}
 package {{.FirstPackage}}
+{{end}}
 import (
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"

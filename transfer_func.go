@@ -50,9 +50,6 @@ func (cfs CallFuncs) FirstPackage() (packageName string) {
 	for _, cf := range cfs {
 		packageName = cf.Package
 	}
-	if packageName == "" {
-		packageName = "defaultpackage"
-	}
 	return packageName
 }
 
@@ -227,8 +224,12 @@ func ExplainFuncPath(funcPath string) (funcParameter *FuncParameter, err error) 
 	return funcParameter, nil
 }
 
+var (
+	ERROR_TRANSFER_FUNC_NAME_NOT_FOUND = errors.New("not found transfer func name")
+)
+
 // GetTransferFuncname 根据输入数据,以及目标key路径,从transfers中选者合适的函数,返回函数名
-func GetTransferFuncname(transfers Transfers, data string, dstKeys []string) (funcName string) {
+func GetTransferFuncname(transfers Transfers, data string, dstKeys []string) (funcName string, err error) {
 	transfers = transfers.GetByNamespace(Transfer_Top_Namespace_Func)
 	dstTransfers := transfers.FilterByDst(dstKeys...)
 	funcNames := dstTransfers.GetSrcNamespace(Transfer_Direction_output)
@@ -243,9 +244,10 @@ func GetTransferFuncname(transfers Transfers, data string, dstKeys []string) (fu
 			}
 		}
 		if allInputKeyExist {
-			return funcName
+			funcName = strings.TrimPrefix(funcName, Transfer_Top_Namespace_Func)
+			return funcName, nil
 		}
-
 	}
-	return ""
+	err = errors.WithMessagef(ERROR_TRANSFER_FUNC_NAME_NOT_FOUND, "dstKeys:%s,input:%s", strings.Join(dstKeys, ","), data)
+	return "", err
 }

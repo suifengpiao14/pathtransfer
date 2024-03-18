@@ -83,7 +83,8 @@ func TestGetTransferFuncname(t *testing.T) {
 		"data.limit.offset",
 		"data.limit.size",
 	}
-	funcName := pathtransfer.GetTransferFuncname(transfers, data, dstKey)
-	require.Equal(t, "func.vocabulary.SetLimit", funcName)
+	funcName, err := pathtransfer.GetTransferFuncname(transfers, data, dstKey)
+	require.NoError(t, err)
+	require.Equal(t, "vocabulary.SetLimit", funcName)
 
 }
