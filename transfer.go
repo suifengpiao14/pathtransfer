@@ -95,6 +95,20 @@ func (transfers Transfers) SplitInOut() (in Transfers, out Transfers) {
 	return in, out
 }
 
+// GetAllDst 获取所有的dst path(筛选函数场景有使用,将目标transfers的dst提取出来，看在func transfers 内是否存在,从而确定转换函数)
+func (transfers Transfers) GetAllDst() (dsts []string) {
+	dsts = make([]string, 0)
+	m := map[string]struct{}{}
+	for _, t := range transfers {
+		path := t.Dst.Path
+		if _, ok := m[path]; ok {
+			continue
+		}
+		dsts = append(dsts, path)
+	}
+	return dsts
+}
+
 // 新增，存在替换
 func (transfer *Transfers) AddReplace(transferItems ...Transfer) {
 	for _, transferItem := range transferItems {
