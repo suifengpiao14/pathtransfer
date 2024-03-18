@@ -230,12 +230,12 @@ var (
 
 // GetTransferFuncname 根据输入数据,以及目标key路径,从transfers中选者合适的函数,返回函数名
 func GetTransferFuncname(transfers Transfers, data string, dstKeys []string) (funcName string, err error) {
-	if len(dstKeys) == 0 {
-		return "", nil
-	}
 	transfers = transfers.GetByNamespace(Transfer_Top_Namespace_Func)
 	dstTransfers := transfers.FilterByDst(dstKeys...)
 	funcNames := dstTransfers.GetSrcNamespace(Transfer_Direction_output)
+	if len(funcNames) == 0 { // 没有函数名,说明本次无需转换
+		return "", nil
+	}
 	for _, funcName := range funcNames {
 		inputNamespace := JoinPath(funcName, Transfer_Direction_input)
 		inputTransfers := transfers.GetByNamespace(inputNamespace)
@@ -251,6 +251,7 @@ func GetTransferFuncname(transfers Transfers, data string, dstKeys []string) (fu
 			return funcName, nil
 		}
 	}
-	err = errors.WithMessagef(ERROR_TRANSFER_FUNC_NAME_NOT_FOUND, "dstKeys:%s,input:%s", strings.Join(dstKeys, ","), data)
+	//函数名不为空,但是找不到转换函数，则报错
+	err = errors.WithMessagef(ERROR_TRANSFER_FUNC_NAME_NOT_FOUND, "funcNames:%s,dstKeys:%s,input:%s", strings.Join(funcNames, ","), strings.Join(dstKeys, ","), data)
 	return "", err
 }
