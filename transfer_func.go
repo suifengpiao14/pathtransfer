@@ -230,6 +230,9 @@ var (
 
 // GetTransferFuncname 根据输入数据,以及目标key路径,从transfers中选者合适的函数,返回函数名
 func GetTransferFuncname(transfers Transfers, data string, dstKeys []string) (funcName string, err error) {
+	if len(dstKeys) == 0 {
+		return "", nil
+	}
 	transfers = transfers.GetByNamespace(Transfer_Top_Namespace_Func)
 	dstTransfers := transfers.FilterByDst(dstKeys...)
 	funcNames := dstTransfers.GetSrcNamespace(Transfer_Direction_output)
