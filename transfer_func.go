@@ -98,7 +98,7 @@ func (fps *FuncParameters) AddReplace(funcParameters ...FuncParameter) {
 		exists := false
 		for i, fp2 := range *fps {
 			if strings.EqualFold(fp2.String(), fp.String()) {
-				(*fps)[i] = fp2
+				(*fps)[i] = fp
 				exists = true
 				break
 			}
