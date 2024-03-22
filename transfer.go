@@ -418,31 +418,31 @@ func PathModifyFnSmallCameCase(path Path) (newPath Path) {
 }
 
 // PathModifyFnSnakeCase 将路径转为下划线格式
-func PathModifyFnSnakeCase(path string) (newPath string) {
-	arr := strings.Split(path, ".")
+func PathModifyFnSnakeCase(path Path) (newPath Path) {
+	arr := strings.Split(path.String(), ".")
 	l := len(arr)
 	newArr := make([]string, l)
 	for i := 0; i < l; i++ {
 		newArr[i] = funcs.SnakeCase(arr[i])
 	}
-	newPath = strings.Join(newArr, ".")
+	newPath = Path(strings.Join(newArr, "."))
 	return
 }
 
 // PathModifyFnLower 将路径转为小写格式
-func PathModifyFnLower(path string) (newPath string) {
-	return strings.ToLower(path)
+func PathModifyFnLower(path Path) (newPath Path) {
+	return Path(strings.ToLower(path.String()))
 }
 
 // PathModifyFnString 路径后面增加@tostring
-func PathModifyFnString(path string) (newPath string) {
-	return fmt.Sprintf("%s.@tostring", path)
+func PathModifyFnString(path Path) (newPath Path) {
+	return Path(fmt.Sprintf("%s.@tostring", path.String()))
 }
 
 // PathModifyFnTrimPrefixFn 生成剔除前缀修改函数
-func PathModifyFnTrimPrefixFn(prefix string) (pathModifyFn PathModifyFn) {
+func PathModifyFnTrimPrefixFn(prefix Path) (pathModifyFn PathModifyFn) {
 	return func(path Path) (newPath Path) {
-		return Path(strings.TrimPrefix(path.String(), prefix))
+		return TrimNamespace(path, prefix.String())
 	}
 }
 
