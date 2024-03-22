@@ -33,12 +33,12 @@ func Parse(s string) (ts Transfers) {
 			dst = src[colonIndex+1:]
 			src = src[:colonIndex]
 		}
-		srcAtIndex := strings.LastIndex(src, "@")
+		srcAtIndex := typeAtIndex(src)
 		if srcAtIndex > -1 {
 			srcType = src[srcAtIndex+1:]
 			src = src[:srcAtIndex]
 		}
-		dstAtIndex := strings.LastIndex(dst, "@")
+		dstAtIndex := typeAtIndex(dst)
 		if dstAtIndex > -1 {
 			dstType = dst[dstAtIndex+1:]
 			dst = dst[:dstAtIndex]
@@ -56,6 +56,17 @@ func Parse(s string) (ts Transfers) {
 		ts = append(ts, t)
 	}
 	return ts
+}
+
+func typeAtIndex(path string) (typeAtIndex int) {
+	typeAtIndex = -1
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == '@' && (i == 0 || path[i-1] != '.') { // .@ 标识modify引用
+			typeAtIndex = i
+			break
+		}
+	}
+	return typeAtIndex
 }
 
 //Unmarshal 转换为Transfers对象

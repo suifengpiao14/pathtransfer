@@ -207,7 +207,7 @@ func ExplainFuncPath(funcPath string) (funcParameter *FuncParameter, err error) 
 	if lastDot > -1 {
 		funcParameter.Package, funcParameter.FuncName = funcParameter.FuncName[:lastDot], funcParameter.FuncName[lastDot+1:]
 	}
-	atIndex := strings.LastIndex(funcParameter.Name, "@")
+	atIndex := typeAtIndex(funcParameter.Name)
 	if atIndex > -1 {
 		funcParameter.Name, funcParameter.Type = funcParameter.Name[:atIndex], funcParameter.Name[atIndex+1:]
 	}

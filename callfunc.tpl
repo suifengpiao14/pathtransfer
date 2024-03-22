@@ -28,7 +28,7 @@ func Call{{$callFunc.FuncName}}(input string) (outputDTO *yaegi.OutputDTO){
             {{ end}}
         }
         outputDTO.Data = out
-		return outputDTO, nil
+		return outputDTO
 	}
 {{end}}
 {{- end -}}
