@@ -28,22 +28,39 @@ func (path Path) HasNamespace(namespace string) bool {
 	return strings.HasPrefix(path.String(), namespace)
 }
 
-//NameWithoutSpace 剔除命名空间后的名称
-func (path Path) NameWithoutSpace() (baseName string) {
-	pathStr := path.String()
-	inIndex := strings.Index(pathStr, Transfer_Direction_input)
-	if inIndex > -1 {
-		baseName = pathStr[inIndex+len(Transfer_Direction_input):]
-		return baseName
-	}
+func (path Path) IsIn() bool {
+	return isIn(path)
+}
 
-	outIndex := strings.Index(pathStr, Transfer_Direction_output)
-	if outIndex > -1 {
-		baseName = pathStr[outIndex+len(Transfer_Direction_output):]
-		return baseName
-	}
+func (path Path) IsOut() bool {
+	return isOut(path)
+}
 
-	return pathStr
+func (path Path) TrimNamespace(namespace string) (newPath Path) {
+	newPath = Path(strings.TrimPrefix(strings.TrimPrefix(path.String(), namespace), "."))
+	return newPath
+}
+
+func (path Path) SplitByIO() (namespace string, localName string) {
+	delim := ""
+	if path.IsIn() {
+		delim = Transfer_Direction_input
+	} else if path.IsOut() {
+		delim = Transfer_Direction_output
+	}
+	if delim == "" {
+		return "", path.String()
+	}
+	arr := strings.SplitN(path.String(), delim, 2)
+	namespace, localName = strings.Trim(arr[0], "."), strings.Trim(arr[1], ".")
+	return namespace, localName
+}
+
+// TrimIONamespace 剔除输入/输出命名空间后的名称
+func (path Path) TrimIONamespace() (localName string) {
+	_, localName = path.SplitByIO()
+
+	return localName
 }
 
 type TransferUnit struct {
@@ -58,6 +75,52 @@ func (tu TransferUnit) String() string {
 		w.WriteString(fmt.Sprintf("@%s", tu.Type))
 	}
 	return w.String()
+}
+
+// FuncParameter 解析函数格式路径
+func (tu TransferUnit) FuncParameter() (funcParameter *FuncParameter, err error) {
+	funcPath := tu.Path
+	funcParameter = &FuncParameter{
+		Type: tu.Type,
+	}
+	if !funcPath.HasNamespace(Transfer_Top_Namespace_Func) {
+		err = errors.WithMessagef(ERROR_TRANSFER_PATH_NAMESPACE_NOT_FUNC, "func path require prefix:%s,got:%s", Transfer_Top_Namespace_Func, funcPath)
+		return nil, err
+	}
+	if funcPath.IsIn() {
+		funcParameter.Direction = Transfer_Direction_input
+	} else if funcPath.IsOut() {
+		funcParameter.Direction = Transfer_Direction_output
+	}
+	if funcParameter.Direction == "" {
+		err = errors.WithMessagef(ERROR_TRANSFER_PATH_DIRECTION_MISSING, "func path format required %s[packageName.]funcName[%s|%s]argName ,got:%s",
+			Transfer_Top_Namespace_Func,
+			Transfer_Direction_input,
+			Transfer_Direction_output,
+			funcPath,
+		)
+		return nil, err
+	}
+
+	funcPath = funcPath.TrimNamespace(Transfer_Top_Namespace_Func)
+	funcName, arg := funcPath.SplitByIO()
+
+	funcParameter.FuncName, funcParameter.Name = funcName, arg
+	lastDot := strings.LastIndex(funcParameter.FuncName, ".")
+	if lastDot > -1 {
+		funcParameter.Package, funcParameter.FuncName = funcParameter.FuncName[:lastDot], funcParameter.FuncName[lastDot+1:]
+	}
+	firstDot := strings.Index(funcParameter.Name, ".")
+	if firstDot > -1 {
+		funcParameter.Name = funcParameter.Name[:firstDot] // 保留第一层
+		funcParameter.Type = "object"
+	}
+	if strings.HasSuffix(funcParameter.Name, "#") {
+		funcParameter.Name = strings.TrimSuffix(funcParameter.Name, "#") // 删除结尾的#
+		funcParameter.Type = "array"
+	}
+	funcParameter.Path = JoinPath(Transfer_Top_Namespace_Func, funcName, funcParameter.Direction, funcParameter.Name) // 剔除name后面的部分，对于对象和原始的funcpath有区别
+	return funcParameter, nil
 }
 
 const (
@@ -96,8 +159,8 @@ func NewTransfer() (transfer Transfers) {
 }
 
 const (
-	Transfer_Direction_input  = ".input."  //函数入参
-	Transfer_Direction_output = ".output." //函数出参
+	Transfer_Direction_input  = ".input"  //函数入参
+	Transfer_Direction_output = ".output" //函数出参
 )
 
 type InOUt interface {
@@ -169,10 +232,13 @@ func (transfer Transfers) Reverse() (reversedTransfer Transfers) {
 	return reversedTransfer
 }
 
-// addTransferModify 在来源路径上增加上目标类型转换函数
-func (t Transfers) addTransferModify() (newT Transfers) {
+// appendTypeToPath 在来源路径上增加上目标类型转换函数
+func (t Transfers) appendTypeToPath() (newT Transfers) {
 	newT = make(Transfers, 0)
 	for _, transfer := range t {
+		if transfer.Src.Path == "" { // 路径为空,使用当前数据(如 userTotal.output  去除命名空间后为空,实际数据库返回也是一个整形,没有key)
+			transfer.Src.Path = Path("@this")
+		}
 		transferFunc, ok := DefaultTransferTypes.GetByType(transfer.Dst.Type)
 		if ok {
 			transfer.Src.Path = Path(fmt.Sprintf("%s%s", transfer.Src.Path.String(), transferFunc.ConvertFn)) //存在映射函数,则修改,否则保持原样
@@ -274,21 +340,20 @@ func (ts Transfers) GetByNamespace(namespace string) (subTransfer Transfers) {
 	return subTransfer
 }
 
-func TrimNamespace(path Path, namespace string) (newPath Path) {
-	newPath = Path(strings.TrimPrefix(strings.TrimPrefix(path.String(), namespace), "."))
-	return newPath
-}
-
 func JoinPath(paths ...string) (newPath Path) {
-	for i := 0; i < len(paths); i++ {
-		paths[i] = strings.Trim(paths[i], ".")
+	arr := make([]string, 0)
+	for _, path := range paths {
+		if path == "" {
+			continue
+		}
+		arr = append(arr, strings.Trim(path, "."))
 	}
-	newPath = Path(strings.Join(paths, "."))
+	newPath = Path(strings.Join(arr, "."))
 	return newPath
 }
 
 func (t Transfers) GjsonPath() (gjsonPath string) {
-	newT := t.addTransferModify()
+	newT := t.appendTypeToPath()
 	m := &transfersModel{
 		keys: make([]string, 0),
 		m:    make(map[string]any),
@@ -442,7 +507,7 @@ func PathModifyFnString(path Path) (newPath Path) {
 // PathModifyFnTrimPrefixFn 生成剔除前缀修改函数
 func PathModifyFnTrimPrefixFn(prefix Path) (pathModifyFn PathModifyFn) {
 	return func(path Path) (newPath Path) {
-		return TrimNamespace(path, prefix.String())
+		return path.TrimNamespace(prefix.String())
 	}
 }
 
@@ -489,7 +554,7 @@ func (t Transfers) ModifySrcPath(srcPathModifyFns ...PathModifyFn) (nt Transfers
 func (ts Transfers) GetCallFnScript(language string) (callScript string, err error) {
 	funcParameters := make(FuncParameters, 0)
 	for _, t := range ts {
-		funcParameter, err := ExplainFuncPath(t.Src.String())
+		funcParameter, err := t.Src.FuncParameter()
 		if errors.Is(err, ERROR_TRANSFER_PATH_NAMESPACE_NOT_FUNC) || errors.Is(err, ERROR_TRANSFER_PATH_DIRECTION_MISSING) {
 			err = nil
 			continue

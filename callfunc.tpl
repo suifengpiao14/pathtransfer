@@ -12,7 +12,13 @@ import (
 {{range $callFunc:=.}}
 func Call{{$callFunc.FuncName}}(input string) (outputDTO *yaegi.OutputDTO){
         {{range $arg:=$callFunc.Input -}}
-            {{$arg.Name}} := cast.{{$arg.TypeConvertFunc}}(gjson.Get(input, "{{$arg.Path.NameWithoutSpace}}").String())
+            {{$arg.Name}}Str:=gjson.Get(input, "{{$arg.Path.TrimIONamespace}}").String()
+            {{if $arg.TypeConvertFunc}}
+                {{$arg.Name}} := cast.{{$arg.TypeConvertFunc}}({{$arg.Name}}Str)
+            {{else}}
+                {{$arg.Name}} := {{$arg.Name}}Str
+            {{end}}
+           
         {{ end}}
         var out string
 		var err error
@@ -20,7 +26,7 @@ func Call{{$callFunc.FuncName}}(input string) (outputDTO *yaegi.OutputDTO){
         {// 避免局部变量冲突
             {{$callFunc.Output.Names}}:={{$callFunc.FuncName}}({{$callFunc.Input.Names}})
             {{range $arg:=$callFunc.Output -}}
-                out, err = sjson.Set(out, "{{$arg.Path.NameWithoutSpace}}", {{$arg.Name}})
+                out, err = sjson.Set(out, "{{$arg.Path.TrimIONamespace}}", {{$arg.Name}})
                 if err != nil {
                    outputDTO.Err = err
 				    return outputDTO

@@ -157,7 +157,7 @@ func TestTransferJsonChange(t *testing.T) {
 
 func TestPathBaseName(t *testing.T) {
 	path := "abc.input.pagination.index"
-	baseName := pathtransfer.Path(path).NameWithoutSpace()
+	baseName := pathtransfer.Path(path).TrimIONamespace()
 	require.Equal(t, "pagination.index", baseName)
 
 }

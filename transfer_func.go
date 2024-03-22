@@ -76,10 +76,11 @@ func (fp FuncParameter) TypeConvertFunc() (fnName string) {
 	m := map[string]string{
 		"int": "ToInt", //使用 cast.XXX 方法
 	}
-	fnName, ok := m[strings.ToLower(fp.Type)]
-	if !ok {
-		fnName = "String"
+	fnName = m[strings.ToLower(fp.Type)]
+	if strings.EqualFold(fnName, "String") {
+		fnName = ""
 	}
+
 	return fnName
 }
 
@@ -177,59 +178,11 @@ var (
 	ERROR_TRANSFER_PATH_DIRECTION_MISSING  = errors.New("missing direction")
 )
 
-// ExplainFuncPath 解析函数格式路径
-func ExplainFuncPath(funcPath string) (funcParameter *FuncParameter, err error) {
-	funcParameter = &FuncParameter{}
-	if !strings.HasPrefix(funcPath, Transfer_Top_Namespace_Func) {
-		err = errors.WithMessagef(ERROR_TRANSFER_PATH_NAMESPACE_NOT_FUNC, "func path require prefix:%s,got:%s", Transfer_Top_Namespace_Func, funcPath)
-		return nil, err
-	}
-	if strings.Contains(funcPath, Transfer_Direction_input) {
-		funcParameter.Direction = Transfer_Direction_input
-	} else if strings.Contains(funcPath, Transfer_Direction_output) {
-		funcParameter.Direction = Transfer_Direction_output
-	}
-	if funcParameter.Direction == "" {
-		err = errors.WithMessagef(ERROR_TRANSFER_PATH_DIRECTION_MISSING, "func path format required %s[packageName.]funcName[%s|%s]argName ,got:%s",
-			Transfer_Top_Namespace_Func,
-			Transfer_Direction_input,
-			Transfer_Direction_output,
-			funcPath,
-		)
-		return nil, err
-	}
-
-	funcPath = strings.TrimPrefix(funcPath, Transfer_Top_Namespace_Func)
-	arr := strings.SplitN(funcPath, funcParameter.Direction, 2)
-	funcName, arg := arr[0], arr[1]
-
-	funcParameter.FuncName, funcParameter.Name = funcName, arg
-	lastDot := strings.LastIndex(funcParameter.FuncName, ".")
-	if lastDot > -1 {
-		funcParameter.Package, funcParameter.FuncName = funcParameter.FuncName[:lastDot], funcParameter.FuncName[lastDot+1:]
-	}
-	atIndex := typeAtIndex(funcParameter.Name)
-	if atIndex > -1 {
-		funcParameter.Name, funcParameter.Type = funcParameter.Name[:atIndex], funcParameter.Name[atIndex+1:]
-	}
-	firstDot := strings.Index(funcParameter.Name, ".")
-	if firstDot > -1 {
-		funcParameter.Name = funcParameter.Name[:firstDot] // 保留第一层
-		funcParameter.Type = "object"
-	}
-	if strings.HasSuffix(funcParameter.Name, "#") {
-		funcParameter.Name = strings.TrimSuffix(funcParameter.Name, "#") // 删除结尾的#
-		funcParameter.Type = "array"
-	}
-	funcParameter.Path = JoinPath(Transfer_Top_Namespace_Func, funcName, funcParameter.Direction, funcParameter.Name) // 剔除name后面的部分，对于对象和原始的funcpath有区别
-	return funcParameter, nil
-}
-
 var (
 	ERROR_TRANSFER_FUNC_NAME_NOT_FOUND = errors.New("not found transfer func name")
 )
 
-//FilterFuncTransfers 从全局词汇中筛选当前关注词汇需要使用到的函数转换器，下个流程配合CallTransferFunc 执行转换
+// FilterFuncTransfers 从全局词汇中筛选当前关注词汇需要使用到的函数转换器，下个流程配合CallTransferFunc 执行转换
 func FilterFuncTransfers(allTransfers Transfers, subTransfers Transfers) (funcTransfers Transfers) {
 	allFuncTransfers := allTransfers.GetByNamespace(Transfer_Top_Namespace_Func)     // 过滤所有函数类型
 	funcVocabularies := allFuncTransfers.GetAllDst()                                 //获取函数类型对应的词汇
@@ -266,10 +219,10 @@ func CallTransferFunc(transfers Transfers, input []byte, closure func(funcname s
 	namespaceInput := JoinPath(funcName, Transfer_Direction_input)   //去除命名空间
 	namespaceOutput := JoinPath(funcName, Transfer_Direction_output) // 补充命名空间
 	inputGopath := inputPathTransfers.Reverse().ModifyDstPath(func(path Path) (newPath Path) {
-		return TrimNamespace(path, namespaceInput.String())
+		return path.TrimNamespace(namespaceInput.String())
 	}).GjsonPath()
 	outputGopath := outputPathTransfers.ModifySrcPath(func(path Path) (newPath Path) {
-		return TrimNamespace(path, namespaceOutput.String())
+		return path.TrimNamespace(namespaceOutput.String())
 	}).GjsonPath()
 	noNamespaceFuncName := strings.TrimPrefix(funcName, Transfer_Top_Namespace_Func)
 	//转换为代码中期望的数据格式

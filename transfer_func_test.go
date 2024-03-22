@@ -26,14 +26,20 @@ func.vocabulary.SetLimit.output.size@int:Dictionary.limit.size
 
 func TestExplainFuncPath(t *testing.T) {
 	t.Run("bas arg", func(t *testing.T) {
-		funcPath := "func.vocabulary.SetLimit.input.index@int"
-		arg, err := pathtransfer.ExplainFuncPath(funcPath)
+		tu := pathtransfer.TransferUnit{
+			Path: pathtransfer.Path("func.vocabulary.SetLimit.input"),
+			Type: "int",
+		}
+		arg, err := tu.FuncParameter()
 		require.NoError(t, err)
 		fmt.Println(arg)
 	})
 	t.Run("object arg", func(t *testing.T) {
-		funcPath := "func.vocabulary.SetLimit.input.pagination.index@int"
-		arg, err := pathtransfer.ExplainFuncPath(funcPath)
+		tu := pathtransfer.TransferUnit{
+			Path: pathtransfer.Path("func.vocabulary.SetLimit.input.pagination.index"),
+			Type: "int",
+		}
+		arg, err := tu.FuncParameter()
 		require.NoError(t, err)
 		fmt.Println(arg)
 	})
