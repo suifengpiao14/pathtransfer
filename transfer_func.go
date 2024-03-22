@@ -7,6 +7,7 @@ import (
 	"strings"
 	"text/template"
 
+	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/pkg/errors"
 	_ "github.com/suifengpiao14/gjsonmodifier"
 	"github.com/tidwall/gjson"
@@ -58,12 +59,12 @@ type FuncParameter struct {
 	Package   string `json:"package"`
 	FuncName  string `json:"funcName"`
 	Name      string `json:"name"`
-	Path      string `json:"path"`
+	Path      Path   `json:"path"`
 	Type      string `json:"type"`
 }
 
 func (fp FuncParameter) String() (s string) {
-	s = fp.Path
+	s = fp.Path.String()
 	if !strings.EqualFold(fp.Type, "object") && !strings.EqualFold(fp.Type, "array") {
 		s = fmt.Sprintf("%s@%s", s, fp.Type)
 	}
@@ -220,7 +221,7 @@ func ExplainFuncPath(funcPath string) (funcParameter *FuncParameter, err error) 
 		funcParameter.Name = strings.TrimSuffix(funcParameter.Name, "#") // 删除结尾的#
 		funcParameter.Type = "array"
 	}
-	funcParameter.Path = fmt.Sprintf("%s%s%s%s", Transfer_Top_Namespace_Func, funcName, funcParameter.Direction, funcParameter.Name) // 剔除name后面的部分，对于对象和原始的funcpath有区别
+	funcParameter.Path = JoinPath(Transfer_Top_Namespace_Func, funcName, funcParameter.Direction, funcParameter.Name) // 剔除name后面的部分，对于对象和原始的funcpath有区别
 	return funcParameter, nil
 }
 
@@ -228,30 +229,59 @@ var (
 	ERROR_TRANSFER_FUNC_NAME_NOT_FOUND = errors.New("not found transfer func name")
 )
 
-// GetTransferFuncname 根据输入数据,以及目标key路径,从transfers中选者合适的函数,返回函数名
-func GetTransferFuncname(transfers Transfers, data string, dstKeys []string) (funcName string, err error) {
-	transfers = transfers.GetByNamespace(Transfer_Top_Namespace_Func)
-	dstTransfers := transfers.FilterByDst(dstKeys...)
+//FilterFuncTransfers 从全局词汇中筛选当前关注词汇需要使用到的函数转换器，下个流程配合CallTransferFunc 执行转换
+func FilterFuncTransfers(allTransfers Transfers, subTransfers Transfers) (funcTransfers Transfers) {
+	allFuncTransfers := allTransfers.GetByNamespace(Transfer_Top_Namespace_Func)     // 过滤所有函数类型
+	funcVocabularies := allFuncTransfers.GetAllDst()                                 //获取函数类型对应的词汇
+	subFuncVocabularies := subTransfers.FilterByDst(funcVocabularies...).GetAllDst() // 求目标词汇和函数全局词汇交集
+	funcDstTransfers := allFuncTransfers.FilterByDst(subFuncVocabularies...)         //获取函数全局转换器中 交集词汇转换器集合
+	funcNames := funcDstTransfers.GetSrcNamespace(Transfer_Direction_output)         // 通过输出域获取转换函数名
+	funcTransfers = make(Transfers, 0)
+	for _, funcName := range funcNames {
+		funcTransfers.AddReplace(allFuncTransfers.GetByNamespace(funcName)...) // 提取转换函数完整的输入输出转换器
+	}
+	return funcTransfers
+
+}
+
+// CallTransferFunc 根据输入数据,以及目标key路径,从transfers中选者合适的函数,执行，将结果合并输入作为输出，主要用于填充输入数据
+func CallTransferFunc(transfers Transfers, input []byte, closure func(funcname string, input []byte) (out []byte, err error)) (out []byte, err error) {
+	dstTransfers := transfers.GetByNamespace(Transfer_Top_Namespace_Func)
 	funcNames := dstTransfers.GetSrcNamespace(Transfer_Direction_output)
 	if len(funcNames) == 0 { // 没有函数名,说明本次无需转换
-		return "", nil
+		return input, nil
 	}
-	for _, funcName := range funcNames {
-		inputNamespace := JoinPath(funcName, Transfer_Direction_input)
-		inputTransfers := transfers.GetByNamespace(inputNamespace)
-		allInputKeyExist := true
-		for _, t := range inputTransfers {
-			if !gjson.Get(data, t.Dst.Path).Exists() {
-				allInputKeyExist = false
-				break
-			}
-		}
-		if allInputKeyExist {
-			funcName = strings.TrimPrefix(funcName, Transfer_Top_Namespace_Func)
-			return funcName, nil
+	funcName := funcNames[0] //本函数只执行一个（如单个torm）
+	inputNamespace := JoinPath(funcName, Transfer_Direction_input)
+	inputTransfers := transfers.GetByNamespace(inputNamespace.String())
+	for _, t := range inputTransfers {
+		if !gjson.GetBytes(input, t.Dst.Path.String()).Exists() {
+			err = errors.Errorf("missing transfer func %s arg %s", funcName, t.Dst.Path)
+			return nil, err
 		}
 	}
-	//函数名不为空,但是找不到转换函数，则报错
-	err = errors.WithMessagef(ERROR_TRANSFER_FUNC_NAME_NOT_FOUND, "funcNames:%s,dstKeys:%s,input:%s", strings.Join(funcNames, ","), strings.Join(dstKeys, ","), data)
-	return "", err
+	funcTransfer := transfers.GetByNamespace(funcName)
+
+	inputPathTransfers, outputPathTransfers := funcTransfer.SplitInOut()
+	namespaceInput := JoinPath(funcName, Transfer_Direction_input)   //去除命名空间
+	namespaceOutput := JoinPath(funcName, Transfer_Direction_output) // 补充命名空间
+	inputGopath := inputPathTransfers.Reverse().ModifyDstPath(func(path Path) (newPath Path) {
+		return TrimNamespace(path, namespaceInput.String())
+	}).GjsonPath()
+	outputGopath := outputPathTransfers.ModifySrcPath(func(path Path) (newPath Path) {
+		return TrimNamespace(path, namespaceOutput.String())
+	}).GjsonPath()
+	noNamespaceFuncName := strings.TrimPrefix(funcName, Transfer_Top_Namespace_Func)
+	//转换为代码中期望的数据格式
+	localInput := gjson.GetBytes(input, inputGopath).String()         // 转换为本地数据格式
+	localOut, err := closure(noNamespaceFuncName, []byte(localInput)) // 执行代码
+	if err != nil {
+		return nil, err
+	}
+	imputMore := gjson.GetBytes(localOut, outputGopath).String() // 转换为外部交互数据格式
+	out, err = jsonpatch.MergePatch(input, []byte(imputMore))    // 合并输入
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }

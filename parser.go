@@ -45,11 +45,11 @@ func Parse(s string) (ts Transfers) {
 		}
 		t := Transfer{
 			Src: TransferUnit{
-				Path: src,
+				Path: Path(src),
 				Type: srcType,
 			},
 			Dst: TransferUnit{
-				Path: dst,
+				Path: Path(dst),
 				Type: dstType,
 			},
 		}
