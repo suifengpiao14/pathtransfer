@@ -14,8 +14,16 @@ import (
 )
 
 const (
-	Transfer_Top_Namespace_Func = "func."
+	Transfer_Top_Namespace_Func       = "func."
+	Transfer_Top_Namespace_Dictionary = "Dictionary."
 )
+
+//IsDictionaryData 判断数据是否为字典key格式
+func IsDictionaryData(input []byte) (yes bool) {
+	path := JoinPath(Transfer_Top_Namespace_Dictionary).String()
+	yes = gjson.GetBytes(input, path).Exists()
+	return yes
+}
 
 type CallFunc struct {
 	Package  string         `json:"package"`
