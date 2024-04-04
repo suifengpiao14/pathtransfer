@@ -16,9 +16,11 @@ import (
 const (
 	Transfer_Top_Namespace_Func       = "func."
 	Transfer_Top_Namespace_Dictionary = "Dictionary."
+	Transfer_Top_Namespace_API        = "Api."
+	Transfer_Top_Namespace_Torm       = "Torm."
 )
 
-//IsDictionaryData 判断数据是否为字典key格式
+// IsDictionaryData 判断数据是否为字典key格式
 func IsDictionaryData(input []byte) (yes bool) {
 	path := JoinPath(Transfer_Top_Namespace_Dictionary).String()
 	yes = gjson.GetBytes(input, path).Exists()
