@@ -1,6 +1,6 @@
 module github.com/suifengpiao14/pathtransfer
 
-go 1.21.0
+go 1.20
 
 require (
 	github.com/evanphx/json-patch/v5 v5.9.0
